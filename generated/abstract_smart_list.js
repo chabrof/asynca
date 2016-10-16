@@ -40,6 +40,7 @@ define(["require", "exports"], function (require, exports) {
         };
         return Sgj_SmartList;
     }());
-    exports.Sgj_SmartList = Sgj_SmartList;
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.default = Sgj_SmartList;
 });
 //# sourceMappingURL=abstract_smart_list.js.map

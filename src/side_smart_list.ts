@@ -1,40 +1,42 @@
+declare let require :(moduleId :string) => any
 import Sgj_SmartList from "./abstract_smart_list"
 
 export default class Sgj_SideSmartList extends Sgj_SmartList {
-
-  _leftCacheSize   :number;
-  _rightCacheSize  :number;
-  _curItemIdx               :number;
-  _nbItems                  :number;
-  _cyclic                   :boolean;
-  _sideCacheOffOnce         :boolean;
-  _lastIndentation          :boolean;
-
+  _leftCacheSize   :number
+  _rightCacheSize  :number
+  _curItemIdx               :number
+  _nbItems                  :number
+  _cyclic                   :boolean
+  _sideCacheOffOnce         :boolean
+  _lastIndentation          :boolean
+  _prefetchingOn            :boolean
   /**
    * Constructor
-   * 
+   *
    *    [pItems] is the list of items
    *    [pCache] is a {any[]} cache buffer (with limited num of items)
    *    [cachesSize] number max of items to be prefetched to the left (or both if rightCacheSize ommited)
    *    [rightCacheSize] number max of items to be prefetched to the right
-   *    [cyclic] boolean 
+   *    [cyclic] boolean
    */
   constructor(pItems :any[], pCache :any[], cachesSize :number, rightCacheSize :number = -1, cyclic :boolean = false) {
 
-    super(pItems, pCache);
-    this._cyclic = cyclic;
-    this._nbItems = pItems.length;
-    this._leftCacheSize = cachesSize;
-    this._rightCacheSize = (rightCacheSize !== -1) ? rightCacheSize : cachesSize;
-    this._sideCacheOffOnce = false;
+    super(pItems, pCache)
+    this._cyclic = cyclic
+    this._nbItems = pItems.length
+    this._leftCacheSize = cachesSize
+    this._rightCacheSize = (rightCacheSize !== -1) ? rightCacheSize : cachesSize
+    this._sideCacheOffOnce = false
+    this._prefetchingOn = true
   }
 
-  alloc(itemHash, bufferIdx :number) :Promise<any> {
+  alloc(itemIdx :number, bufferIdx :number) :Promise<any> {
+    console.log('meta alloc');
     return new Promise<any>(function(ok, ko) {});
   }
 
 
-  unalloc(itemHash, bufferIdx :number) :void {
+  unalloc(itemIdx :number, bufferIdx :number) :void {
   }
 
 
@@ -63,7 +65,7 @@ export default class Sgj_SideSmartList extends Sgj_SmartList {
   /**
    * Get distance between items
    * distance > 0 distance to the right
-   * distance < 0 distance to the left 
+   * distance < 0 distance to the left
    */
   getSignedMinDistance(itemOrig :number, itemDest :number, nbItems :number, cyclic :boolean = false) :number {
 
@@ -76,7 +78,7 @@ export default class Sgj_SideSmartList extends Sgj_SmartList {
           return - (nbItems - distance)
       }
       else {
-        // We found a "right distance" 
+        // We found a "right distance"
         if ((nbItems + distance) < - distance)
           return (nbItems + distance)
       }
@@ -85,13 +87,20 @@ export default class Sgj_SideSmartList extends Sgj_SmartList {
     return distance
   }
 
-
   /**
-   *  you can get an item without prefetching the others 
+   *  you can unactivate prefetch
    *  use this, before the get call
    */
-  sideCacheOffOnce() :void {
-    this._sideCacheOffOnce = true
+  prefetchingOff() :void {
+    this._prefetchingOn = false
+  }
+
+  /**
+   *  you can reactivate prefetch
+   *  use this, before the get call
+   */
+  prefetchingOn() :void {
+    this._prefetchingOn = true
   }
 
   get lastIndentationFlag() :boolean {
@@ -105,38 +114,38 @@ export default class Sgj_SideSmartList extends Sgj_SmartList {
    */
   get(itemIdx) :Promise<any> {
 
-    this._curItemIdx = itemIdx;
-    this._lastIndentation = false;
+    this._curItemIdx = itemIdx
+    this._lastIndentation = false
 
     // Current item
     let ret :Promise<any> = super.get(itemIdx);
 
     // Prefetch
-    if (! this._sideCacheOffOnce) {
+    if (this._prefetchingOn) {
       // Left items
       for (let tmpItemIdx :number = itemIdx - this._leftCacheSize; tmpItemIdx <= itemIdx - 1; tmpItemIdx++) {
         if (tmpItemIdx < 0) {
           if (this._cyclic) {
-            super.get(this.items.length + tmpItemIdx);
+            super.get(this.items.length + tmpItemIdx)
           }
         }
         else
-          super.get(tmpItemIdx);
+          super.get(tmpItemIdx)
       }
       // Right items
       for (let tmpItemIdx :number = itemIdx + 1, ct = 0; ct < this._rightCacheSize; tmpItemIdx++, ct++) {
         if (ct === this._rightCacheSize - 1)
-            this._lastIndentation = true;
+            this._lastIndentation = true
         if (tmpItemIdx >= this.items.length) {
           if (this._cyclic) {
-            super.get(tmpItemIdx - this.items.length);
+            super.get(tmpItemIdx - this.items.length)
           }
         }
         else
-          super.get(tmpItemIdx);
+          super.get(tmpItemIdx)
       }
     }
-    this._sideCacheOffOnce = false;
+    this._sideCacheOffOnce = false
     return ret;
   }
 }

@@ -1,8 +1,9 @@
-export abstract class Sgj_SmartList {
+abstract class Sgj_SmartList {
   items           :any[];
   cache           :any[];
   _idxHistoryTab  :any[];
   _allocatedFlg   :any[];
+
 
   constructor (pItems :any[],  pcache :any[]) {
     this.cache = pcache;
@@ -44,7 +45,7 @@ export abstract class Sgj_SmartList {
 
   /**
    * Defines the strategy for unallocate item in cache
-   * By default Fifo 
+   * By default Fifo
    * [itemIdx] is the index of the item
    * @return {number} index in the [_idxHistoryTab]
    */
@@ -55,19 +56,19 @@ export abstract class Sgj_SmartList {
   /**
    * @abstract
    * [itemIdx] is the index in the list of items
-   * [cacheIdx] is the index in the cache which is computed by the [_cache] method 
+   * [cacheIdx] is the index in the cache which is computed by the [_cache] method
    */
-  abstract alloc(itemIdx, cacheIdx :number) :Promise<any>;
+  abstract alloc(itemIdx, cacheIdx :number) :Promise<any>
 
   /**
    * @abstract
    * [itemIdx] is the index in the list of items
-   * [cacheIdx] is the index in the cache which is computed by the [_cache] method 
+   * [cacheIdx] is the index in the cache which is computed by the [_cache] method
    */
-  abstract unalloc(itemHash, cacheIdx :number) :void;
+  abstract unalloc(itemHash, cacheIdx :number) :void
 
   /**
-   * get a Promise to the wished item 
+   * get a Promise to the wished item
    * uses or computes item in cache
    */
   get(itemHash) : Promise<any> {
@@ -80,3 +81,4 @@ export abstract class Sgj_SmartList {
     }
   }
 }
+export default Sgj_SmartList

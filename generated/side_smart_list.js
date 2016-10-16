@@ -3,24 +3,27 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-define(["require", "exports", "abstract_smart_list"], function (require, exports, abstract_smart_list_1) {
+define(["require", "exports", "./abstract_smart_list"], function (require, exports, abstract_smart_list_1) {
     "use strict";
     var Sgj_SideSmartList = (function (_super) {
         __extends(Sgj_SideSmartList, _super);
         function Sgj_SideSmartList(pItems, pCache, cachesSize, rightCacheSize, cyclic) {
             if (rightCacheSize === void 0) { rightCacheSize = -1; }
             if (cyclic === void 0) { cyclic = false; }
-            _super.call(this, pItems, pCache);
-            this._cyclic = cyclic;
-            this._nbItems = pItems.length;
-            this._leftCacheSize = cachesSize;
-            this._rightCacheSize = (rightCacheSize !== -1) ? rightCacheSize : cachesSize;
-            this._sideCacheOffOnce = false;
+            var _this = _super.call(this, pItems, pCache) || this;
+            _this._cyclic = cyclic;
+            _this._nbItems = pItems.length;
+            _this._leftCacheSize = cachesSize;
+            _this._rightCacheSize = (rightCacheSize !== -1) ? rightCacheSize : cachesSize;
+            _this._sideCacheOffOnce = false;
+            _this._prefetchingOn = true;
+            return _this;
         }
-        Sgj_SideSmartList.prototype.alloc = function (itemHash, bufferIdx) {
+        Sgj_SideSmartList.prototype.alloc = function (itemIdx, bufferIdx) {
+            console.log('meta alloc');
             return new Promise(function (ok, ko) { });
         };
-        Sgj_SideSmartList.prototype.unalloc = function (itemHash, bufferIdx) {
+        Sgj_SideSmartList.prototype.unalloc = function (itemIdx, bufferIdx) {
         };
         Sgj_SideSmartList.prototype.unallocStrategie = function (itemIdx) {
             for (var ct = 0; ct < this._idxHistoryTab.length; ct++) {
@@ -47,8 +50,11 @@ define(["require", "exports", "abstract_smart_list"], function (require, exports
             }
             return distance;
         };
-        Sgj_SideSmartList.prototype.unactivateSideCacheOnce = function () {
-            this._sideCacheOffOnce = true;
+        Sgj_SideSmartList.prototype.prefetchingOff = function () {
+            this._prefetchingOn = false;
+        };
+        Sgj_SideSmartList.prototype.prefetchingOn = function () {
+            this._prefetchingOn = true;
         };
         Object.defineProperty(Sgj_SideSmartList.prototype, "lastIndentationFlag", {
             get: function () {
@@ -61,7 +67,7 @@ define(["require", "exports", "abstract_smart_list"], function (require, exports
             this._curItemIdx = itemIdx;
             this._lastIndentation = false;
             var ret = _super.prototype.get.call(this, itemIdx);
-            if (!this._sideCacheOffOnce) {
+            if (this._prefetchingOn) {
                 for (var tmpItemIdx = itemIdx - this._leftCacheSize; tmpItemIdx <= itemIdx - 1; tmpItemIdx++) {
                     if (tmpItemIdx < 0) {
                         if (this._cyclic) {
