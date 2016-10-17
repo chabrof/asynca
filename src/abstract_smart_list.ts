@@ -1,15 +1,16 @@
 abstract class Sgj_SmartList {
+  _prefixLog      :string
   items           :any[];
   cache           :any[];
-  _idxHistoryTab  :any[];
-  _allocatedFlg   :any[];
-
+  _historyTab  :any[];
+  _itemIdxToCacheIdx   :number[];
 
   constructor (pItems :any[],  pcache :any[]) {
-    this.cache = pcache;
-    this.items = pItems;
-    this._idxHistoryTab = [];
-    this._allocatedFlg = [];
+    this._prefixLog = "SgjFocus : "
+    this.cache = pcache
+    this.items = pItems
+    this._historyTab = []
+    this._itemIdxToCacheIdx = []
   }
 
   /**
@@ -19,26 +20,40 @@ abstract class Sgj_SmartList {
    */
   _cache(itemIdx) :Promise<any> {
 
+    let oldItemIdx :number
+    let oldCacheIdx :number
     let cacheIdx :number
 
-    if (this._idxHistoryTab.length >= this.cache.length) {
+    if (this._historyTab.length >= this.cache.length) {
+      //
       // No more space in cache => unalloc one elem
-      let cacheDelIdx :number = this.unallocStrategie(itemIdx)
-      cacheIdx = this._idxHistoryTab[cacheDelIdx][1]
-      this.unalloc(this._idxHistoryTab[cacheDelIdx][0], cacheIdx)
-      this._allocatedFlg[this._idxHistoryTab[cacheDelIdx][0]] = false
-      this._idxHistoryTab.splice(cacheDelIdx, 1)
+      //
+
+      // search in history withe uallocStrategie
+      let historyIdx :number = this.unallocStrategie(itemIdx)
+      oldItemIdx = this._historyTab[historyIdx].itemIdx
+      oldCacheIdx = this._historyTab[historyIdx].cacheIdx
+      console.log(this._prefixLog + 'get cacheIdx to recycle :' + oldCacheIdx)
+      // unalloc the "good cache elt"
+      this.unalloc(oldItemIdx, oldCacheIdx)
+      this._itemIdxToCacheIdx[oldItemIdx] = undefined
+      this._historyTab.splice(historyIdx, 1)
+
+      // use the old cache idx as a new one for new item caching
+      cacheIdx = oldCacheIdx
     } else {
-      cacheIdx = this._idxHistoryTab.length
+      // get the cache Idx (the history tab is not full for the moment historyIdx and cacheIdx are the same)
+      cacheIdx = this._historyTab.length // == historyIdx
     }
 
     // Put in cache
-    this._idxHistoryTab.push([itemIdx, cacheIdx])
+    this._historyTab.push({"itemIdx" : itemIdx, "cacheIdx" : cacheIdx})
+    console.log(this._prefixLog + '_historyTab length is now :' + this._historyTab.length)
     let promise :Promise<any> = this.alloc(itemIdx, cacheIdx)
+    this._itemIdxToCacheIdx[itemIdx] = cacheIdx
     let self = this
     return promise.then(
       function(result) {
-        self._allocatedFlg[itemIdx] = true
         return result;
       })
   }
@@ -47,7 +62,7 @@ abstract class Sgj_SmartList {
    * Defines the strategy for unallocate item in cache
    * By default Fifo
    * [itemIdx] is the index of the item
-   * @return {number} index in the [_idxHistoryTab]
+   * @return {number} index in the [_historyTab]
    */
   unallocStrategie(itemIdx) :number {
     return 0
@@ -65,19 +80,21 @@ abstract class Sgj_SmartList {
    * [itemIdx] is the index in the list of items
    * [cacheIdx] is the index in the cache which is computed by the [_cache] method
    */
-  abstract unalloc(itemHash, cacheIdx :number) :void
+  abstract unalloc(itemIdx, cacheIdx :number) :void
 
   /**
    * get a Promise to the wished item
    * uses or computes item in cache
    */
-  get(itemHash) : Promise<any> {
+  get(itemIdx) : Promise<any> {
 
-    if (this._allocatedFlg[itemHash] !== true) {
-      return this._cache(itemHash)
+    if (this._itemIdxToCacheIdx[itemIdx] === undefined) {
+      console.log(this._prefixLog, 'item(' + itemIdx + ') not cached => compute it')
+      return this._cache(itemIdx)
     }
     else {
-      return Promise.resolve(this.items[itemHash])
+      console.log(this._prefixLog, 'item(' + itemIdx + ') already in cache => get it')
+      return Promise.resolve(this.cache[this._itemIdxToCacheIdx[itemIdx]])
     }
   }
 }

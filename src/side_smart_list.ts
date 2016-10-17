@@ -31,25 +31,26 @@ export default class Sgj_SideSmartList extends Sgj_SmartList {
   }
 
   alloc(itemIdx :number, bufferIdx :number) :Promise<any> {
-    console.log('meta alloc');
+    console.assert(false, 'This method must be overriden')
     return new Promise<any>(function(ok, ko) {});
   }
 
 
   unalloc(itemIdx :number, bufferIdx :number) :void {
+    console.assert(false, 'This method must be overriden')
   }
 
 
   /**
-   * Returns the index ([int]) of the item to be unallocated in the [_idxHistoryTab]
+   * Returns the index ([int]) of the item to be unallocated in the [_historyTab]
    * overrides meta method
    * computes distance and get the right item to unallocate
    */
   unallocStrategie(itemIdx :number) :number {
 
     //  We do NOT use the arg [itemIdx] but _curItemIdx (which represents the "wished" item and not the right of left precomputed items)
-    for (let ct = 0; ct < this._idxHistoryTab.length; ct++) {
-      let distance = this.getSignedMinDistance(this._curItemIdx, this._idxHistoryTab[ct][0], this._nbItems, this._cyclic)
+    for (let ct = 0; ct < this._historyTab.length; ct++) {
+      let distance = this.getSignedMinDistance(this._curItemIdx, this._historyTab[ct].itemIdx, this._nbItems, this._cyclic)
 
       if (distance > this._rightCacheSize ||
          (0 - distance) > this._leftCacheSize ) {
@@ -57,7 +58,7 @@ export default class Sgj_SideSmartList extends Sgj_SmartList {
       }
     }
 
-    // By default, we use the meta class method, wich unallocate the "oldest" cached item (FIFO)
+    // By default, we use the meta class method, wich unallocate the "oldest" cached item (FIFO) : _historyTab first item
     return super.unallocStrategie(itemIdx)
   }
 
@@ -103,10 +104,6 @@ export default class Sgj_SideSmartList extends Sgj_SmartList {
     this._prefetchingOn = true
   }
 
-  get lastIndentationFlag() :boolean {
-    return this._lastIndentation
-  }
-
 
   /**
    * Main method to get an item
@@ -115,9 +112,12 @@ export default class Sgj_SideSmartList extends Sgj_SmartList {
   get(itemIdx) :Promise<any> {
 
     this._curItemIdx = itemIdx
-    this._lastIndentation = false
 
     // Current item
+    console.group()
+    console.log(this._prefixLog, '/////////////////////////////////')
+    console.log(this._prefixLog, 'Get current : ', itemIdx)
+
     let ret :Promise<any> = super.get(itemIdx);
 
     // Prefetch
@@ -126,26 +126,36 @@ export default class Sgj_SideSmartList extends Sgj_SmartList {
       for (let tmpItemIdx :number = itemIdx - this._leftCacheSize; tmpItemIdx <= itemIdx - 1; tmpItemIdx++) {
         if (tmpItemIdx < 0) {
           if (this._cyclic) {
-            super.get(this.items.length + tmpItemIdx)
+            let modTmpItemIdx = this.items.length + tmpItemIdx
+            console.log(this._prefixLog, '/////////////////')
+            console.log(this._prefixLog, 'Prefetch left : ', modTmpItemIdx)
+            super.get(modTmpItemIdx)
           }
         }
-        else
+        else {
+          console.log(this._prefixLog, '/////////////////')
+          console.log(this._prefixLog, 'Prefetch left : ', tmpItemIdx)
           super.get(tmpItemIdx)
+        }
       }
       // Right items
       for (let tmpItemIdx :number = itemIdx + 1, ct = 0; ct < this._rightCacheSize; tmpItemIdx++, ct++) {
-        if (ct === this._rightCacheSize - 1)
-            this._lastIndentation = true
         if (tmpItemIdx >= this.items.length) {
           if (this._cyclic) {
-            super.get(tmpItemIdx - this.items.length)
+            let modTmpItemIdx = tmpItemIdx - this.items.length
+            console.log(this._prefixLog, '/////////////////')
+            console.log(this._prefixLog, 'Prefetch right :', modTmpItemIdx)
+            super.get(modTmpItemIdx)
           }
         }
-        else
+        else {
+          console.log(this._prefixLog, '/////////////////')
+          console.log(this._prefixLog, 'Prefetch right :', tmpItemIdx)
           super.get(tmpItemIdx)
+        }
       }
     }
-    this._sideCacheOffOnce = false
+    console.groupEnd()
     return ret;
   }
 }
