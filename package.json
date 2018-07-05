@@ -1,18 +1,52 @@
 {
-  "name": "sgj_smart_list",
-  "description": "Js Array with cache and prefetch strategies",
-  "version": "0.0.1",
+  "name": "asynca",
+  "description": "Javascript Array with cache and prefetch strategies",
+  "version": "0.4.0",
   "license": "MIT",
   "author": {
     "name": "François Chabrou",
     "email": "developer@stopgapjs.org",
     "url": "http://www.stopgapjs.org"
   },
-  "main": "./js/smart_list.js",
-  "typings": "./typings/smart_list.d.ts",
+  "main": "./dist/browser/smart_list.js",
   "homepage": "http://www.stopgapjs.org/#sgj_smart_list",
-  "dependencies": {
-    "requirejs": ">=2.1.14"
+  "dependencies": {},
+  "devDependencies": {
+    "babel-core": "^6.26.3",
+    "babel-loader": "^7.1.4",
+    "babel-preset-env": "^1.6.1",
+    "webpack": "^4.5.0",
+    "webpack-cli": "^2.0.14",
+    "webpack-dev-server": "^3.1.4",
+    "copy-webpack-plugin": "^4.5.1",
+    "mocha": "^5.0.5",
+    "mocha-webpack": "https://github.com/thomasmichaelwallace/mocha-webpack#build",
+    "jsdom": "^11.8.0",
+    "jsdom-global": "^3.0.2",
+    "chai": "^4.1.2",
+    "eslint": "^4.19.1",
+    "eslint-config-standard": "^10.2.1",
+    "eslint-friendly-formatter": "^3.0.0",
+    "eslint-loader": "^2.0.0",
+    "eslint-plugin-import": "^2.11.0",
+    "eslint-plugin-node": "^6.0.1",
+    "eslint-plugin-promise": "^3.5.0",
+    "eslint-plugin-standard": "^3.0.1"
   },
-  "readme": "#stopgapjs"
+  "scripts": {
+    "build": "npm run build:dev && npm run build:prod",
+    "build:dev": "npm run build:dev:browser && npm run build:dev:node",
+    "build:dev:browser": "cd \"pack_browser/dev\" && pwd && \"../../node_modules/.bin/webpack\" --mode development",
+    "build:browser:dev": "npm run build:dev:browser",
+    "build:dev:node": "cd \"pack_node/dev\" && pwd && \"../../node_modules/.bin/webpack\" --mode development",
+    "build:node:dev": "npm run build:dev:node",
+    "build:prod": "npm run build:prod:browser && npm run build:prod:node",
+    "build:prod:browser": "cd \"pack_browser/prod\" && pwd && \"../../node_modules/.bin/webpack\" --mode production",
+    "build:browser:prod": "npm run build:prod:browser",
+    "build:prod:node": "cd \"pack_node/prod\" && pwd && \"../../node_modules/.bin/webpack\" --mode production",
+    "build:node:prod": "npm run build:prod:node",
+    "build:samples": "\"./node_modules/.bin/webpack\" --config \"pack_browser/samples/webpack.config.js\"",
+    "test": "mocha-webpack -r \"jsdom-global/register\" --colors --full-trace --webpack-config \"./pack_node/prod/webpack.config.js\" \"test/**/*.js\""
+  },
+  "readme": ""
 }

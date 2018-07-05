@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="../../dist/samples/combiSample.js"></script>
+    <style>
+      body {
+        box-sizing: content-box;
+      }
+      #buttons {
+        float: left;
+      }
+
+      #container {
+        margin-bottom:20px;
+        width: 100%;
+        height: 50px;
+        border-radius: 5px;
+      }
+
+      #cacheView {
+        border: solid 2px gray;
+        width: 320px;
+        height: 50px
+      }
+
+      .item {
+        transition : background-color 0.2s;
+        border: solid 1px white;
+        box-sizing:border-box;
+        color: white;
+        width: 100px;
+        height: 100%;
+        text-align: center;
+        float:left;
+      }
+
+      .item:hover {
+        border: dashed 3px gold;
+      }
+    </style>
+  <body>
+
+    <div id="container"></div>
+    <div style="clear:both;"><div>
+    <h3>Horizontal cache</h3>
+    <div id="cacheView"></div>
+    <h3>Vertical cache</h3>
+    <div id="cacheView"></div>
