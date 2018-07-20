@@ -25,7 +25,7 @@ export class Abstract {
       //
 
       // search in history withe uallocStrategie
-      let historyIdx = this.unallocStrategie(itemIdx)
+      let historyIdx = this.unallocStrategie(this._curItemIdx, itemIdx)
       oldItemIdx = this._history[historyIdx].itemIdx
       oldCacheIdx = this._history[historyIdx].cacheIdx
 
@@ -34,7 +34,7 @@ export class Abstract {
       this._cache[oldCacheIdx] = undefined
       this._itemIdxToCacheIdx[oldItemIdx] = undefined
       this._history.splice(historyIdx, 1)
-      unallocPromise = this.free(oldItemIdx)
+      unallocPromise = this._free(oldItemIdx, this._items[oldItemIdx])
 
       // use the old cache idx as a new one for new item caching
       cacheIdx = oldCacheIdx
@@ -45,10 +45,11 @@ export class Abstract {
 
     // Put in cache
     this._history.push({"itemIdx" : itemIdx, "cacheIdx" : cacheIdx})
-    this._cache[cacheIdx] = this._items[itemIdx]
+    const item = this._items[itemIdx]
+    this._cache[cacheIdx] = item
     this._itemIdxToCacheIdx[itemIdx] = cacheIdx
     console.log(this._prefixLog, ` use cacheIdx : ${cacheIdx}  => alloc item : ${itemIdx}`)
-    return unallocPromise ? unallocPromise.then(() => this._itemIdxToCacheIdx[itemIdx] !== undefined ? this.alloc(itemIdx) : null) : this.alloc(itemIdx)
+    return unallocPromise ? unallocPromise.then(() => this._itemIdxToCacheIdx[itemIdx] !== undefined ? this._alloc(itemIdx, item) : null) : this._alloc(itemIdx, item)
   }
 
   /**
@@ -64,16 +65,16 @@ export class Abstract {
    * @abstract
    * [itemIdx] is the index in the list of items which must be computed
    */
-  alloc (itemIdx) {
-    console.assert(false, 'This method must be overriden')
+  _alloc (itemIdx, item) {
+    console.assert(false, "This method must be overriden : you must call the 'alloc' setter/getter")
   }
 
   /**
    * @abstract
    * [itemIdx] is the index in the list of items which must be free (un-computed)
    */
-  free (itemIdx) {
-    console.assert(false, 'This method must be overriden')
+  _free (itemIdx, item) {
+    console.assert(false, "This method must be overriden : you must call the 'free' setter/getter")
   }
 
   /**
@@ -81,6 +82,11 @@ export class Abstract {
    * it uses precomputed item in cache (if available) or ask for a computation
    */
   getAsync (itemIdx) {
+    this._curItemIdx = itemIdx
+    return this._getAsync(itemIdx)
+  }
+
+  _getAsync (itemIdx) {
     if (this._itemIdxToCacheIdx[itemIdx] === undefined) {
       console.log(this._prefixLog, 'item(' + itemIdx + ') not cached => compute it')
       return this._manageCache(itemIdx)
@@ -95,8 +101,13 @@ export class Abstract {
    * uses precomputed item in cache (if available) or ask for a computation
    */
   get (itemIdx) {
+    this._curItemIdx = itemIdx
+    return this._get(itemIdx)
+  }
+
+  _get (itemIdx) {
     // First of all, call the whole machinery
-    this.getAsync(itemIdx)
+    this._getAsync(itemIdx)
     // ... and simply return the item
     return this._items[itemIdx]
   }
@@ -136,6 +147,15 @@ export class Abstract {
   items (value = undefined) {
     return this._manageSetGet('_items', value)
   }
+
+  alloc (value) {
+    return this._manageSetGet('_alloc', value)
+  }
+
+  free (value) {
+    return this._manageSetGet('_free', value)
+  }
+
 
   _manageSetGet (attrib, value) {
     if (value === undefined) return this[attrib]

@@ -46,17 +46,32 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// define getter function for harmony exports
 /******/ 	__webpack_require__.d = function(exports, name, getter) {
 /******/ 		if(!__webpack_require__.o(exports, name)) {
-/******/ 			Object.defineProperty(exports, name, {
-/******/ 				configurable: false,
-/******/ 				enumerable: true,
-/******/ 				get: getter
-/******/ 			});
+/******/ 			Object.defineProperty(exports, name, { enumerable: true, get: getter });
 /******/ 		}
 /******/ 	};
 /******/
 /******/ 	// define __esModule on exports
 /******/ 	__webpack_require__.r = function(exports) {
+/******/ 		if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 			Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 		}
 /******/ 		Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 	};
+/******/
+/******/ 	// create a fake namespace object
+/******/ 	// mode & 1: value is a module id, require it
+/******/ 	// mode & 2: merge all properties of value into the ns
+/******/ 	// mode & 4: return value when already ns object
+/******/ 	// mode & 8|1: behave like require
+/******/ 	__webpack_require__.t = function(value, mode) {
+/******/ 		if(mode & 1) value = __webpack_require__(value);
+/******/ 		if(mode & 8) return value;
+/******/ 		if((mode & 4) && typeof value === 'object' && value && value.__esModule) return value;
+/******/ 		var ns = Object.create(null);
+/******/ 		__webpack_require__.r(ns);
+/******/ 		Object.defineProperty(ns, 'default', { enumerable: true, value: value });
+/******/ 		if(mode & 2 && typeof value != 'string') for(var key in value) __webpack_require__.d(ns, key, function(key) { return value[key]; }.bind(null, key));
+/******/ 		return ns;
 /******/ 	};
 /******/
 /******/ 	// getDefaultExport function for compatibility with non-harmony modules
@@ -254,7 +269,7 @@ class Abstract {
       //
 
       // search in history withe uallocStrategie
-      let historyIdx = this.unallocStrategie(itemIdx);
+      let historyIdx = this.unallocStrategie(this._curItemIdx, itemIdx);
       oldItemIdx = this._history[historyIdx].itemIdx;
       oldCacheIdx = this._history[historyIdx].cacheIdx;
 
@@ -263,7 +278,7 @@ class Abstract {
       this._cache[oldCacheIdx] = undefined;
       this._itemIdxToCacheIdx[oldItemIdx] = undefined;
       this._history.splice(historyIdx, 1);
-      unallocPromise = this.free(oldItemIdx);
+      unallocPromise = this._free(oldItemIdx, this._items[oldItemIdx]);
 
       // use the old cache idx as a new one for new item caching
       cacheIdx = oldCacheIdx;
@@ -274,10 +289,11 @@ class Abstract {
 
     // Put in cache
     this._history.push({ "itemIdx": itemIdx, "cacheIdx": cacheIdx });
-    this._cache[cacheIdx] = this._items[itemIdx];
+    const item = this._items[itemIdx];
+    this._cache[cacheIdx] = item;
     this._itemIdxToCacheIdx[itemIdx] = cacheIdx;
     console.log(this._prefixLog, ` use cacheIdx : ${cacheIdx}  => alloc item : ${itemIdx}`);
-    return unallocPromise ? unallocPromise.then(() => this._itemIdxToCacheIdx[itemIdx] !== undefined ? this.alloc(itemIdx) : null) : this.alloc(itemIdx);
+    return unallocPromise ? unallocPromise.then(() => this._itemIdxToCacheIdx[itemIdx] !== undefined ? this._alloc(itemIdx, item) : null) : this._alloc(itemIdx, item);
   }
 
   /**
@@ -293,16 +309,16 @@ class Abstract {
    * @abstract
    * [itemIdx] is the index in the list of items which must be computed
    */
-  alloc(itemIdx) {
-    console.assert(false, 'This method must be overriden');
+  _alloc(itemIdx, item) {
+    console.assert(false, "This method must be overriden : you must call the 'alloc' setter/getter");
   }
 
   /**
    * @abstract
    * [itemIdx] is the index in the list of items which must be free (un-computed)
    */
-  free(itemIdx) {
-    console.assert(false, 'This method must be overriden');
+  _free(itemIdx, item) {
+    console.assert(false, "This method must be overriden : you must call the 'free' setter/getter");
   }
 
   /**
@@ -310,6 +326,11 @@ class Abstract {
    * it uses precomputed item in cache (if available) or ask for a computation
    */
   getAsync(itemIdx) {
+    this._curItemIdx = itemIdx;
+    return this._getAsync(itemIdx);
+  }
+
+  _getAsync(itemIdx) {
     if (this._itemIdxToCacheIdx[itemIdx] === undefined) {
       console.log(this._prefixLog, 'item(' + itemIdx + ') not cached => compute it');
       return this._manageCache(itemIdx);
@@ -324,8 +345,13 @@ class Abstract {
    * uses precomputed item in cache (if available) or ask for a computation
    */
   get(itemIdx) {
+    this._curItemIdx = itemIdx;
+    return this._get(itemIdx);
+  }
+
+  _get(itemIdx) {
     // First of all, call the whole machinery
-    this.getAsync(itemIdx);
+    this._getAsync(itemIdx);
     // ... and simply return the item
     return this._items[itemIdx];
   }
@@ -366,6 +392,14 @@ class Abstract {
     return this._manageSetGet('_items', value);
   }
 
+  alloc(value) {
+    return this._manageSetGet('_alloc', value);
+  }
+
+  free(value) {
+    return this._manageSetGet('_free', value);
+  }
+
   _manageSetGet(attrib, value) {
     if (value === undefined) return this[attrib];
 
@@ -401,7 +435,7 @@ class FifoCache extends _Abstract__WEBPACK_IMPORTED_MODULE_0__["Abstract"] {
    * [itemIdx] is the index of the item
    * @return {number} index in the [_history]
    */
-  unallocStrategie(itemIdx) {
+  unallocStrategie(curItems, allocItemIdx) {
     return 0;
   }
 }
@@ -437,11 +471,13 @@ class SidePrefetch extends _SidePrefetchAbstract__WEBPACK_IMPORTED_MODULE_0__["S
    * overrides meta method
    * computes distance and get the right item to unallocate
    */
-  unallocStrategie(itemIdx) {
+  unallocStrategie(curItemIdx, allocItemIdx) {
+    console.warn('itemIdx', allocItemIdx, 'curItemIdx', curItemIdx);
+
     let nbItems = this._items.length;
-    //  We do NOT use the arg [itemIdx] but _curItemIdx (which represents the "wished" item and not the right of left precomputed items)
+    //  We do NOT use the arg [itemIdx] but _curItemIdx (which represents the "wished" item and not the right or left precomputed items)
     for (let ct = 0; ct < this._history.length; ct++) {
-      let distance = this.getSignedMinDistance(this._curItemIdx, this._history[ct].itemIdx, nbItems, this._cyclic);
+      let distance = this.getSignedMinDistance(curItemIdx, this._history[ct].itemIdx, nbItems, this._cyclic);
 
       if (distance > this._rightPrefetchSize || 0 - distance > this._leftPrefetchSize) {
         return ct;
@@ -449,20 +485,18 @@ class SidePrefetch extends _SidePrefetchAbstract__WEBPACK_IMPORTED_MODULE_0__["S
     }
 
     // By default, we use the FifoCache method, wich unallocate the "oldest" cached item
-    return super.unallocStrategie(itemIdx);
+    return super.unallocStrategie(curItemIdx, allocItemIdx);
   }
 
   /**
    * Main method to get an item
    * computes cache and prefetch automaticaly
    */
-  get(itemIdx) {
-    this._curItemIdx = itemIdx;
-
+  _get(itemIdx) {
     // Current item
     console.group(this._prefixLog, 'Get current : ', itemIdx);
 
-    let ret = super.get(itemIdx);
+    let ret = super._get(itemIdx);
 
     // Prefetch
     if (this._prefetchingOn) {
@@ -470,30 +504,31 @@ class SidePrefetch extends _SidePrefetchAbstract__WEBPACK_IMPORTED_MODULE_0__["S
       for (let tmpItemIdx = itemIdx - this._leftPrefetchSize; tmpItemIdx <= itemIdx - 1; tmpItemIdx++) {
         if (tmpItemIdx < 0) {
           if (this._cyclic) {
-            let modTmpItemIdx = this.items.length + tmpItemIdx;
+            let modTmpItemIdx = this._items.length + tmpItemIdx;
             console.log(this._prefixLog, '/////////////////');
             console.log(this._prefixLog, 'Prefetch left : ', modTmpItemIdx);
-            super.get(modTmpItemIdx);
+            super._get(modTmpItemIdx);
           }
         } else {
           console.log(this._prefixLog, '/////////////////');
           console.log(this._prefixLog, 'Prefetch left : ', tmpItemIdx);
-          super.get(tmpItemIdx);
+          super._get(tmpItemIdx);
         }
       }
       // Right items
+      console.log('right : ', this._rightPrefetchSize);
       for (let tmpItemIdx = itemIdx + 1, ct = 0; ct < this._rightPrefetchSize; tmpItemIdx++, ct++) {
-        if (tmpItemIdx >= this.items.length) {
+        if (tmpItemIdx >= this._items.length) {
           if (this._cyclic) {
-            let modTmpItemIdx = tmpItemIdx - this.items.length;
+            let modTmpItemIdx = tmpItemIdx - this._items.length;
             console.log(this._prefixLog, '/////////////////');
             console.log(this._prefixLog, 'Prefetch right :', modTmpItemIdx);
-            super.get(modTmpItemIdx);
+            super._get(modTmpItemIdx);
           }
         } else {
           console.log(this._prefixLog, '/////////////////');
           console.log(this._prefixLog, 'Prefetch right :', tmpItemIdx);
-          super.get(tmpItemIdx);
+          super._get(tmpItemIdx);
         }
       }
     }
@@ -512,6 +547,10 @@ class SidePrefetch extends _SidePrefetchAbstract__WEBPACK_IMPORTED_MODULE_0__["S
 
   rightPrefetchSideSize(value) {
     return this._manageSetGet('_rightPrefetchSize', value);
+  }
+
+  cyclic(value) {
+    return this._manageSetGet('_cyclic', value);
   }
 }
 

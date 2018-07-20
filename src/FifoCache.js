@@ -9,7 +9,7 @@ export class FifoCache extends Abstract {
    * [itemIdx] is the index of the item
    * @return {number} index in the [_history]
    */
-  unallocStrategie (itemIdx) {
+  unallocStrategie (curItems, allocItemIdx) {
     return 0
   }
 }

@@ -4,56 +4,13 @@ let containerDomElt // the container div
 let cacheViewDomElt // this div to view the cache in action
 let nbItems = 14
 
-let nbSimulatedRessources = 4
+let nbSimulatedRessources = 5
 let simulatedRessources = []
 let cache = new Array(nbSimulatedRessources) // Cache with 5 free spaces (5 ressources of computing)
 
 /**
  * Create our implementation of SidePrefetch class
  */
-class TestSidePrefeth extends SidePrefetch {
-
-  alloc (itemIdx) {
-    let divItem = this._items[itemIdx]
-    divItem.toBeComputed = true
-    if (simulatedRessources.length > nbSimulatedRessources - 1) {
-      simulatedRessources.shift()
-    }
-    let upperResolve
-
-    let promise = new Promise((resolve, reject) => { upperResolve = resolve })
-    console.info(`Alloc called for ${itemIdx}`, divItem)
-    simulatedRessources.push(window.setTimeout(
-      () => {
-        if (!divItem.toBeComputed) return upperResolve() // ==>
-
-        divItem.style.backgroundColor = "darkGreen"
-        divItem.innerHTML = `item <b>${itemIdx}<br>:)</b>`
-        console.info(`Alloc Finished ! : ${itemIdx}`)
-        upperResolve()
-      }, 300))
-    return promise
-  }
-
-  free (itemIdx) {
-    let divItem = this._items[itemIdx]
-    divItem.toBeComputed = false
-    console.info(`Free called for ${itemIdx}`)
-    let async =
-      (resolve, reject) => {
-        window.setTimeout(
-          () => {
-            if (divItem.toBeComputed) return resolve()// ==>
-            console.info(`Free Finished ! : ${itemIdx}`)
-            divItem.style.backgroundColor = "darkRed"
-            divItem.innerHTML = `item <b>${itemIdx}<br/>:(</b>`
-            resolve()
-          }, 100)
-      }
-    return new Promise(async)
-  }
-}
-
 function _createItem (idx) {
   let item = document.createElement('div')
   item.setAttribute('id', `div_${idx}`)
@@ -66,10 +23,47 @@ function _createItem (idx) {
 }
 
 
-let asyncaTest = new TestSidePrefeth()
+let asyncaTest = new SidePrefetch()
   .cache(cache)
-  .leftPrefetchSideSize(1)
+  .leftPrefetchSideSize(2)
   .rightPrefetchSideSize(2)
+  .cyclic(true)
+  .alloc((itemIdx, item) => {
+    item.toBeComputed = true
+    if (simulatedRessources.length > nbSimulatedRessources - 1) {
+      simulatedRessources.shift()
+    }
+    let upperResolve
+
+    let promise = new Promise((resolve, reject) => { upperResolve = resolve })
+    console.info(`Alloc called for ${itemIdx}`, item)
+    simulatedRessources.push(window.setTimeout(
+      () => {
+        if (!item.toBeComputed) return upperResolve() // ==>
+
+        item.style.backgroundColor = "darkGreen"
+        item.innerHTML = `item <b>${itemIdx}<br>:)</b>`
+        console.info(`Alloc Finished ! : ${itemIdx}`)
+        upperResolve()
+      }, 300))
+    return promise
+  })
+  .free((itemIdx, item) => {
+    item.toBeComputed = false
+    console.info(`Free called for ${itemIdx}`)
+    let async =
+      (resolve, reject) => {
+        window.setTimeout(
+          () => {
+            if (item.toBeComputed) return resolve()// ==>
+            console.info(`Free Finished ! : ${itemIdx}`)
+            item.style.backgroundColor = "darkRed"
+            item.innerHTML = `item <b>${itemIdx}<br/>:(</b>`
+            resolve()
+          }, 100)
+      }
+    return new Promise(async)
+  })
 
 for (let idx = 0; idx < nbItems; idx++) {
   let item = _createItem(idx)

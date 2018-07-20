@@ -45,7 +45,7 @@
     "build:browser:prod": "npm run build:prod:browser",
     "build:prod:node": "cd \"pack_node/prod\" && pwd && \"../../node_modules/.bin/webpack\" --mode production",
     "build:node:prod": "npm run build:prod:node",
-    "build:samples": "\"./node_modules/.bin/webpack\" --config \"pack_browser/samples/webpack.config.js\"",
+    "build:samples": "sh \"./node_modules/.bin/webpack\" --config \"pack_browser/samples/webpack.config.js\"",
     "test": "mocha-webpack -r \"jsdom-global/register\" --colors --full-trace --webpack-config \"./pack_node/prod/webpack.config.js\" \"test/**/*.js\""
   },
   "readme": ""
