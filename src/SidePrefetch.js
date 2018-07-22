@@ -2,21 +2,18 @@ import { SidePrefetchAbstract } from "./SidePrefetchAbstract"
 
 export class SidePrefetch extends SidePrefetchAbstract {
 
-  init () {
-    super.init()
+  _init () {
+    super._init()
 
     this._cyclic = this._cyclic || false
-    this._rightPrefetchSize = (this._rightPrefetchSize !== undefined ? this._rightPrefetchSize : this._leftPrefetchSize)
+    this._leftPrefetchSideSize = (this._leftPrefetchSideSize !== undefined ? this._leftPrefetchSideSize : this._leftPrefetchSideSize)
     this._sidePrefetchOffOnce = false
-    this._prefetchingOn = true
   }
 
   /**
-   * Returns the index ([int]) of the item to be unallocated in the [_history]
-   * overrides meta method
-   * computes distance and get the right item to unallocate
+   * See meta method for documentation
    */
-  unallocStrategie (curItemIdx, allocItemIdx) {
+  unallocStrategie (curItemIdx, curItem, allocItemIdx, allocItem) {
     console.warn('itemIdx', allocItemIdx, 'curItemIdx', curItemIdx)
 
     let nbItems = this._items.length
@@ -24,19 +21,18 @@ export class SidePrefetch extends SidePrefetchAbstract {
     for (let ct = 0; ct < this._history.length; ct++) {
       let distance = this.getSignedMinDistance(curItemIdx, this._history[ct].itemIdx, nbItems, this._cyclic)
 
-      if (distance > this._rightPrefetchSize ||
-         (0 - distance) > this._leftPrefetchSize) {
+      if (distance > this._rightPrefetchSideSize ||
+         (0 - distance) > this._leftPrefetchSideSize) {
         return ct
       }
     }
 
     // By default, we use the FifoCache method, wich unallocate the "oldest" cached item
-    return super.unallocStrategie(curItemIdx, allocItemIdx)
+    return super.unallocStrategie(curItemIdx, curItem, allocItemIdx, allocItem)
   }
 
   /**
-   * Main method to get an item
-   * computes cache and prefetch automaticaly
+   * See meta method for documentation
    */
   _get (itemIdx) {
     // Current item
@@ -45,9 +41,9 @@ export class SidePrefetch extends SidePrefetchAbstract {
     let ret = super._get(itemIdx)
 
     // Prefetch
-    if (this._prefetchingOn) {
+    if (this._prefetching) {
       // Left items
-      for (let tmpItemIdx = itemIdx - this._leftPrefetchSize; tmpItemIdx <= itemIdx - 1; tmpItemIdx++) {
+      for (let tmpItemIdx = itemIdx - this._leftPrefetchSideSize; tmpItemIdx <= itemIdx - 1; tmpItemIdx++) {
         if (tmpItemIdx < 0) {
           if (this._cyclic) {
             let modTmpItemIdx = this._items.length + tmpItemIdx
@@ -62,8 +58,8 @@ export class SidePrefetch extends SidePrefetchAbstract {
         }
       }
       // Right items
-      console.log('right : ', this._rightPrefetchSize)
-      for (let tmpItemIdx = itemIdx + 1, ct = 0; ct < this._rightPrefetchSize; tmpItemIdx++, ct++) {
+      console.log('right : ', this._rightPrefetchSideSize)
+      for (let tmpItemIdx = itemIdx + 1, ct = 0; ct < this._rightPrefetchSideSize; tmpItemIdx++, ct++) {
         if (tmpItemIdx >= this._items.length) {
           if (this._cyclic) {
             let modTmpItemIdx = tmpItemIdx - this._items.length
@@ -84,15 +80,15 @@ export class SidePrefetch extends SidePrefetchAbstract {
   }
 
   prefetchSideSize (value) {
-    return this._manageSetGet('_leftPrefetchSize', value)
+    return this._manageSetGet('_leftPrefetchSideSize', value)
   }
 
   leftPrefetchSideSize (value) {
-    return this._manageSetGet('_leftPrefetchSize', value)
+    return this._manageSetGet('_leftPrefetchSideSize', value)
   }
 
   rightPrefetchSideSize (value) {
-    return this._manageSetGet('_rightPrefetchSize', value)
+    return this._manageSetGet('_rightPrefetchSideSize', value)
   }
 
   cyclic (value) {

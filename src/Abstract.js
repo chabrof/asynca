@@ -1,11 +1,16 @@
 export class Abstract {
 
+  constructor () {
+    this.init()
+  }
+
   init () {
     this._items = this._items || []
     this._prefixLog = "asynca : "
 
     this._history = []
     this._itemIdxToCacheIdx = []
+    this._prefetching = true
   }
 
   /**
@@ -25,7 +30,7 @@ export class Abstract {
       //
 
       // search in history withe uallocStrategie
-      let historyIdx = this.unallocStrategie(this._curItemIdx, itemIdx)
+      let historyIdx = this.unallocStrategie(this._curItemIdx, this._items[this._curItemIdx], itemIdx, this._items[itemIdx])
       oldItemIdx = this._history[historyIdx].itemIdx
       oldCacheIdx = this._history[historyIdx].cacheIdx
 
@@ -54,10 +59,13 @@ export class Abstract {
 
   /**
    * Defines the strategy for unallocate item in cache
-   * [itemIdx] is the index of the item
+   * [curItemIdx] the index of the current item (that is wished by user)
+   * [curItem] The item which is whished by user
+   * [allocItemIdx] the index of the item which will be allocated now (and which needs an unalloc process to free a space for its future allocation)
+   * [allocItem] the item which will be allocated now (and which needs an unalloc process to free a space for its future allocation)
    * @return {number} index in the [_history]
    */
-  unallocStrategie (itemIdx) {
+  unallocStrategie (curItemIdx, curItem, allocItemIdx, allocItem) {
     console.assert(false, 'This method must be overriden')
   }
 
@@ -145,7 +153,14 @@ export class Abstract {
   }
 
   items (value = undefined) {
-    return this._manageSetGet('_items', value)
+    if (value === undefined) return this._items
+
+    // pre
+    console.assert(value && value.length, 'items must be an array')
+
+    value.forEach((item) => this.push(item))
+
+    return this
   }
 
   alloc (value) {
@@ -156,6 +171,9 @@ export class Abstract {
     return this._manageSetGet('_free', value)
   }
 
+  prefetching (value) {
+    return this._manageSetGet('_prefetching', value)
+  }
 
   _manageSetGet (attrib, value) {
     if (value === undefined) return this[attrib]

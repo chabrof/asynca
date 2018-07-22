@@ -22,20 +22,4 @@ export class SidePrefetchAbstract extends FifoCache {
 
     return distance
   }
-
-  /**
-   *  you can unactivate prefetch
-   *  use this, before the get call
-   */
-  prefetchingOff () {
-    this._prefetchingOn = false
-  }
-
-  /**
-   *  you can reactivate prefetch
-   *  use this, before the get call
-   */
-  prefetchingOn () {
-    this._prefetchingOn = true
-  }
 }
