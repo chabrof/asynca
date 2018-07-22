@@ -48,18 +48,18 @@ export class SidePrefetch2D extends SidePrefetchAbstract {
     // Prefetch
     if (this._prefetching) {
       // Items available in the square centered arround current item
-      for (let tmpItemIdx = itemIdx - this._leftPrefetchSideSize; tmpItemIdx <= itemIdx - 1; tmpItemIdx++) {
-        if (tmpItemIdx < 0) {
-          if (this._cyclic) {
-            let modTmpItemIdx = this._items.length + tmpItemIdx
-            console.log(this._prefixLog, '/////////////////')
-            console.log(this._prefixLog, 'Prefetch square: ', modTmpItemIdx)
-            super._get(modTmpItemIdx)
-          }
-        } else {
-          console.log(this._prefixLog, '/////////////////')
-          console.log(this._prefixLog, 'Prefetch left : ', tmpItemIdx)
-          super._get(tmpItemIdx)
+      const curX = this._x(this._items[itemIdx])
+      const curY = this._y(this._items[itemIdx])
+      const minX = curX - this._prefetchSideSize
+      const maxX = curX + this._prefetchSideSize
+      const minY = curY - this._prefetchSideSize
+      const maxY = curY + this._prefetchSideSize
+
+      for (let x = minX; x <= maxX; x++) {
+        for (let y = minY; y <= maxY; y++) {
+          let prefetchItemIdx
+          // Prefetch x, y around cur item
+          if (this.xyItemIdxs[x] && (prefetchItemIdx = this.xyItemIdxs[x][y])) super.get(prefetchItemIdx)
         }
       }
     }
@@ -75,12 +75,12 @@ export class SidePrefetch2D extends SidePrefetchAbstract {
   push (item) {
     let x = this._x(item)
     let y = this._y(item)
-    this._xyItems[x] = this._xyItems || {}
+    this.xyItemIdxs[x] = this.xyItemIdxs || {}
 
     // pre
-    console.assert(!this._xyItems[x][y], '(x, y) coords are already used by another item')
+    console.assert(!this.xyItemIdxs[x][y], '(x, y) coords are already used by another item')
 
-    this._xyItems[x][y] = item
+    this.xyItemIdxs[x][y] = this._items.length
     // meta
     return super.push(item)
   }
@@ -94,6 +94,6 @@ export class SidePrefetch2D extends SidePrefetchAbstract {
   }
 
   prefetchSideSize (value) {
-    return this._manageSetGet('_leftPrefetchSideSize', value)
+    return this._manageSetGet('_prefetchSideSize', value)
   }
 }
